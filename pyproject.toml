@@ -5,7 +5,9 @@ build-backend = 'setuptools.build_meta'
 [project]
 name = 'kalam'
 version = '0.0.1'
-dependencies = []
+dependencies = [
+	'click',
+]
 
 [project.scripts]
 kalam = 'kalam:cli'
