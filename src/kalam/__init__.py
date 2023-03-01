@@ -122,8 +122,7 @@ class Lyric:
 
 
 class Klm:
-    LYRIC_RE = re.compile(r'\[([\d.]+)\s+->\s+([\d.]+)]\s+(.*)')
-    INCR_RE = re.compile(r'\[([\d.]+)]\s*\+\s+(.*)')
+    LYRIC_RE = re.compile(r'\[([\d.]+)\s+->\s+([\d.]+)]\s+(\+?)(.*)')
 
     def __init__(self, lyrics: list[Lyric]):
         self.lyrics = lyrics
@@ -133,9 +132,15 @@ class Klm:
         lyrics = []
         for i, line in enumerate(i):
             if m := cls.LYRIC_RE.match(line):
-                fr, to, text = m.groups()
+                fr, to, incr, text = m.groups()
 
-                fr = BeatTs.from_string(fr)
+                if incr == '+':
+                    text = lyrics[-1].text + text
+
+                if fr == '.':
+                    fr = lyrics[-1].end
+                else:
+                    fr = BeatTs.from_string(fr)
                 to = BeatTs.from_string(to)
 
                 lyrics.append(Lyric(fr, to, text))
@@ -157,8 +162,9 @@ def cli(infiles, output):
     for i, file in enumerate(infiles):
         k = Klm.parse(file)
         lyric_events.extend((i, lyr) for lyr in k.lyrics)
-    lyric_events = sorted(lyric_events, key=lambda e: e[1].start.to_time(tempo))[::-1]
-    print(lyric_events)
+    lyric_events = sorted(lyric_events, key=lambda e: e[1].start.to_time(tempo))
+    for i, l in lyric_events:
+        print(f'[{i:02}] {l}')
 
     pygame.init()
     size = width, height = (900, 500)
@@ -171,40 +177,41 @@ def cli(infiles, output):
     clock = pygame.time.Clock()
     # lyric_t = 120  # middle of "there's something irresistable"
     lyric_t0 = BeatTs.from_string('98.1.1.00').to_time(tempo)-0.001
+    last_t = max(lyr.end.to_time(tempo) for tri, lyr in lyric_events)
     lyric_t = lyric_t0
-    while True:
+    running = True
+    while running:
         clock.tick(60)
 
         for ev in pygame.event.get():
-            if ev.type == pygame.QUIT: break
+            if ev.type == pygame.QUIT:
+                running = False
+
             elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_r:
                 print('AWAAA')
                 lyric_t = lyric_t0
+            elif ev.type == pygame.KEYDOWN and ev.key in [pygame.K_LEFT, pygame.K_RIGHT]:
+                dt = 0.5 * (-1 if ev.key == pygame.K_LEFT else +1)
+                lyric_t += dt
 
-        # process current lyrics
-        while lyric_events and lyric_events[-1][1].start.to_time(tempo) <= lyric_t:
-            tri, lyr = lyric_events.pop()
-            # print(ev, ev[1].end.to_time(tempo))
-            if lyric_t < lyr.end.to_time(tempo):
-                currently_shown.append((tri, lyr, 0.))
+        # process current lyrics LOL THIS IS SHIT O(n)
+        currently_shown = []
+        for i, (tri, lyr) in enumerate(lyric_events):
+            start_t = lyr.start.to_time(tempo)
+            end_t = lyr.end.to_time(tempo)
 
-        # print(currently_shown)
+            if start_t <= lyric_t and lyric_t <= end_t:
+                currently_shown.append(i)
 
         screen.fill((0, 0, 0))
-        currently_shown = [
-            ev for ev in currently_shown if ev[1].end.to_time(tempo) > lyric_t
-        ]  # age out lyrics
-        if not lyric_events and not currently_shown:
-            break
+        if lyric_t > last_t:
+            running = False
 
-
-        for tri, lyric, age in currently_shown:
+        for i in currently_shown:
+            tri, lyric = lyric_events[i]
             dur = lyric.end.to_time(tempo) - lyric.start.to_time(tempo)
-            u = age / dur
-            text = lyr_font.render(f'{lyric.text} {u:.2f}', True, (255, 255, 255))
+            text = lyr_font.render(f'{lyric.text}', True, (255, 255, 255))
             screen.blit(text, (10, 10 + tri * 80))
-
-        currently_shown = [(tri, lyr, age + clock.get_time() / 1000.) for tri, lyr, age in currently_shown]
 
         beat_t = BeatTs.from_time(lyric_t, tempo)
         text = dbg_font.render(f't:{lyric_t:03.1f}/{beat_t} | dt:{clock.get_time()}ms',
