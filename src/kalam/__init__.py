@@ -153,8 +153,10 @@ class Klm:
 
 @click.command()
 @click.option('-o', '--output', type=click.Path())
+@click.option('-s', '--start')
+@click.option('-e', '--until')
 @click.argument('infiles', type=click.File('r'), nargs=-1)
-def cli(infiles, output):
+def cli(infiles, output, start, until):
     tempo = Tempo(190)
 
     lyric_events = []
@@ -176,12 +178,18 @@ def cli(infiles, output):
     dbg_font = pygame.font.SysFont('PragmataPro Mono', 18)
     clock = pygame.time.Clock()
     # lyric_t = 120  # middle of "there's something irresistable"
-    lyric_t0 = BeatTs.from_string('98.1.1.00').to_time(tempo)-0.001
-    last_t = max(lyr.end.to_time(tempo) for tri, lyr in lyric_events)
+    if start:
+        lyric_t0 = BeatTs.from_string(start).to_time(tempo)
+    else:
+        lyric_t0 = lyric_events[0][1].start.to_time(tempo)-0.001 #BeatTs.from_string('98.1.1.00').to_time(tempo)-0.001
+    if until:
+        last_t = BeatTs.from_string(until).to_time(tempo)
+    else:
+        last_t = max(lyr.end.to_time(tempo) for tri, lyr in lyric_events)
     lyric_t = lyric_t0
     running = True
     while running:
-        clock.tick(60)
+        clock.tick()#60)
 
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
@@ -219,7 +227,7 @@ def cli(infiles, output):
         textpos = text.get_rect(topright=(width, 0))
         screen.blit(text, textpos)
 
-        lyric_t += clock.get_time() / 1000.  # [ms -> s]
+        lyric_t += 0.01667 #ugh. clock.get_time() / 1000.  # [ms -> s]
 
         if output:
             video.update(pygame.surfarray.pixels3d(screen).swapaxes(0, 1), inverted=False)
