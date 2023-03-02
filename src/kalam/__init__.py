@@ -219,7 +219,7 @@ def cli(infiles, output, start, until):
             tri, lyric = lyric_events[i]
             dur = lyric.end.to_time(tempo) - lyric.start.to_time(tempo)
             text = lyr_font.render(f'{lyric.text}', True, (255, 255, 255))
-            screen.blit(text, (10, 10 + tri * 80))
+            screen.blit(text, (10, 10 + tri * 70))
 
         beat_t = BeatTs.from_time(lyric_t, tempo)
         text = dbg_font.render(f't:{lyric_t:03.1f}/{beat_t} | dt:{clock.get_time()}ms',
