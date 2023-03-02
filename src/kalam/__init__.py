@@ -194,11 +194,9 @@ def cli(infiles, output, start, until):
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
                 running = False
-
-            elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_r:
-                print('AWAAA')
+            elif not output and ev.type == pygame.KEYDOWN and ev.key == pygame.K_r:
                 lyric_t = lyric_t0
-            elif ev.type == pygame.KEYDOWN and ev.key in [pygame.K_LEFT, pygame.K_RIGHT]:
+            elif not output and ev.type == pygame.KEYDOWN and ev.key in [pygame.K_LEFT, pygame.K_RIGHT]:
                 dt = 0.5 * (-1 if ev.key == pygame.K_LEFT else +1)
                 lyric_t += dt
 
@@ -227,7 +225,10 @@ def cli(infiles, output, start, until):
         textpos = text.get_rect(topright=(width, 0))
         screen.blit(text, textpos)
 
-        lyric_t += 0.01667 #ugh. clock.get_time() / 1000.  # [ms -> s]
+        if output: # print with fixed dt
+            lyric_t += 1./60
+        else: # interactive run :)
+            lyric_t += clock.get_time() / 1000.  # [ms -> s]
 
         if output:
             video.update(pygame.surfarray.pixels3d(screen).swapaxes(0, 1), inverted=False)
