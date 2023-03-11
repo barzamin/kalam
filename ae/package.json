@@ -4,6 +4,7 @@
   "description": "AE tooling for the kalam lyricfile system",
   "main": "index.js",
   "scripts": {
+    "build": "spack"
   },
   "author": "3moon",
   "license": "BSD-3-Clause",
