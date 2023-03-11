@@ -131,6 +131,8 @@ class Klm:
     def parse(cls, i):
         lyrics = []
         for i, line in enumerate(i):
+            if line == '': continue
+
             if m := cls.LYRIC_RE.match(line):
                 fr, to, incr, text = m.groups()
 
