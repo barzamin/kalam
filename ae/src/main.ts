@@ -33,11 +33,15 @@ function loadBundle(bundleFolder: Folder): Bundle {
         trackfile.close();
     }
 
-    return new Bundle(manifest['tempo'], tracks, trackNames);
+    return new Bundle(new Tempo(manifest['tempo']), tracks, trackNames);
 }
 
 const bundleFolder = Folder.selectDialog('select klm songfolder');
 const bundle = loadBundle(bundleFolder);
+
+function roundToFrame(t, fps) {
+    return Math.floor(t*fps)/fps;
+}
 
 const comp = app.project.activeItem;
 if (comp instanceof CompItem) {
@@ -49,6 +53,39 @@ if (comp instanceof CompItem) {
         const track = bundle.tracks[i];
         const textLayer = comp.layers.addText('');
         textLayer.name = `KAL:${bundle.trackNames[i]}`;
+        // insert an empty keyframe to avoid flickering/reading
+        // the first content keyframe when the layer starts
+        const textProp = textLayer.property('ADBE Text Properties').property('ADBE Text Document') as any; // fuck this
+        textProp.setValueAtTime(0, '');
+
+        track.lyrics.sort((a, b) => {
+            return a.start.toTime(tempo) - b.start.toTime(tempo);
+        });
+
+        // let prevEnd = 0;
+        let textKfTimestamps = [], textKfValues = [];
+        for (let i = 0; i < track.lyrics.length; i++) {
+            const currLyric = track.lyrics[i];
+            alert(`currst=${currLyric.start.toTime(tempo)}`);
+            const roundedStart = roundToFrame(currLyric.start.toTime(tempo), fps);
+            const roundedEnd   = roundToFrame(currLyric.end.toTime(tempo),   fps);
+
+            textKfTimestamps.push(roundedStart);
+            textKfValues.push(currLyric.text);
+
+            const nextLyric = track.lyrics[i+1];
+            // dont keyframe out if the next text picks up on the same frame
+            if (!(nextLyric && roundToFrame(nextLyric.start.toTime(tempo), fps) == roundedEnd)) {
+                textKfTimestamps.push(roundedEnd);
+                textKfValues.push('');
+            }
+
+            // prevEnd = roundedEnd;
+        }
+        textProp.setValuesAtTimes(textKfTimestamps, textKfValues);
+
+        break;
+
     }
     app.endUndoGroup();
 }
