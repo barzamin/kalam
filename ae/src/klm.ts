@@ -1,10 +1,12 @@
 export class Bundle {
     tempo: Tempo;
     tracks: Track[];
+    trackNames: string[];
 
-    constructor(tempo: Tempo, tracks: Track[]) {
+    constructor(tempo: Tempo, tracks: Track[], trackNames: string[]) {
         this.tempo = tempo;
         this.tracks = tracks;
+        this.trackNames = trackNames;
     }
 }
 
@@ -13,7 +15,7 @@ export class Tempo {
     period: number;
     constructor(bpm: number) {
         this.bpm = bpm;
-        this.period = 60/bpm;
+        this.period = 60 / bpm;
     }
 }
 
@@ -26,7 +28,7 @@ export class TimeSig {
         this.numerator = numerator;
     }
 }
-const FOUR_FOUR = new TimeSig(4,4)
+const FOUR_FOUR = new TimeSig(4, 4)
 
 export class BeatTs {
     bar: number;
@@ -69,8 +71,8 @@ export class BeatTs {
         // TODO: ASSUMES 16th TICKS AND QN BEATS
         const beats = this.bar * this.timeSig.numerator
             + this.beat
-            + this.tick/4
-            + this.pct/400;
+            + this.tick / 4
+            + this.pct / 400;
 
         return beats * tempo.period;
     }

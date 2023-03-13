@@ -1,6 +1,6 @@
 /// <reference types="types-for-adobe/AfterEffects/22.0"/>
 
-import {BeatTs, Bundle, Track, Tempo} from './klm';
+import { BeatTs, Bundle, Track, Tempo } from './klm';
 
 // -- polyfills
 if (String.prototype.trim == null) {
@@ -9,8 +9,6 @@ if (String.prototype.trim == null) {
     };
 }
 // -- end polyfills
-
-declare function alert(msg: string);
 
 function readTextSync(path: string): string {
     const f = new File(path);
@@ -22,19 +20,35 @@ function readTextSync(path: string): string {
     return data;
 }
 
-const bundleFolder = Folder.selectDialog('select klm songfolder');
-const manifest = JSON.parse(readTextSync(bundleFolder.absoluteURI + '/song.json'));
-const trackfiles = bundleFolder.getFiles('*.kal');
-let tracks = [];
-for (const trackfile of trackfiles) {
-    if (trackfile instanceof Folder) continue;
+function loadBundle(bundleFolder: Folder): Bundle {
+    const manifest = JSON.parse(readTextSync(bundleFolder.absoluteURI + '/song.json'));
+    const trackfiles = bundleFolder.getFiles('*.kal');
+    let tracks = [], trackNames = [];
+    for (const trackfile of trackfiles) {
+        if (trackfile instanceof Folder) continue;
 
-    trackfile.open('r');
-    tracks.push(Track.parse(trackfile.read()));
-    trackfile.close();
+        trackfile.open('r');
+        tracks.push(Track.parse(trackfile.read()));
+        trackNames.push(trackfile.name);
+        trackfile.close();
+    }
+
+    return new Bundle(manifest['tempo'], tracks, trackNames);
 }
 
-const bundle = new Bundle(manifest['tempo'], tracks);
+const bundleFolder = Folder.selectDialog('select klm songfolder');
+const bundle = loadBundle(bundleFolder);
 
-// alert(JSON.stringify(bundle));
-alert(JSON.stringify(BeatTs.fromTime(60*2 + 3.632, new Tempo(190))));
+const comp = app.project.activeItem;
+if (comp instanceof CompItem) {
+    const fps = comp.frameRate;
+    const tempo = bundle.tempo;
+
+    app.beginUndoGroup('kalam_import');
+    for (let i = 0; i < bundle.tracks.length; i++) {
+        const track = bundle.tracks[i];
+        const textLayer = comp.layers.addText('');
+        textLayer.name = `KAL:${bundle.trackNames[i]}`;
+    }
+    app.endUndoGroup();
+}
