@@ -6,10 +6,5 @@ export default {
         file: 'dist/kalam.jsx',
         format: 'iife',
     },
-    'plugins': [typescript({
-        compilerOptions: {
-            lib: ['es5'],
-            target: 'es5',
-        },
-    })]
+    'plugins': [typescript()]
 };
